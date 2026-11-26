@@ -36,4 +36,9 @@ class ReminderSequenceTest {
         assertFalse(ReminderContent.quranPassages.any { it.contains("فَاتَّقُوا اللَّهَ مَا اسْتَطَعْتُمْ") })
         assertTrue(ReminderContent.isReady())
     }
+
+    @Test
+    fun reminderIntervalIsExactlyTwoHours() {
+        assertEquals(7_200_000L, ReminderTiming.INTERVAL_MILLIS)
+    }
 }
