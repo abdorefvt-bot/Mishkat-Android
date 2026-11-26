@@ -1,7 +1,9 @@
 package com.abdelrahman.mishkat
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReminderSequenceTest {
@@ -24,5 +26,14 @@ class ReminderSequenceTest {
         assertNull(ReminderSequence.itemAt(-1, 40, 10))
         assertNull(ReminderSequence.itemAt(0, 0, 10))
         assertNull(ReminderSequence.itemAt(0, 40, 0))
+    }
+
+    @Test
+    fun exactUserSuppliedListsAreCompleteAndKeepIntentionalDuplicate() {
+        assertEquals(40, ReminderContent.quranPassages.size)
+        assertEquals(10, ReminderContent.adhkar.size)
+        assertEquals(ReminderContent.adhkar[0], ReminderContent.adhkar[5])
+        assertFalse(ReminderContent.quranPassages.any { it.contains("فَاتَّقُوا اللَّهَ مَا اسْتَطَعْتُمْ") })
+        assertTrue(ReminderContent.isReady())
     }
 }
