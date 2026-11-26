@@ -17,8 +17,6 @@ object ReminderScheduler {
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         val savedTriggerAt = preferences.getLong(KEY_NEXT_ALARM_AT, 0L)
-        if (ReminderTiming.shouldKeepExistingAlarm(savedTriggerAt, now, reset)) return
-
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
@@ -27,7 +25,7 @@ object ReminderScheduler {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val triggerAt = now + ReminderTiming.INTERVAL_MILLIS
+        val triggerAt = ReminderTiming.nextTriggerAt(savedTriggerAt, now, reset)
 
         try {
             when {
