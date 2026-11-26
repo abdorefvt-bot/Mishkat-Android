@@ -19,18 +19,18 @@ jobs:
         run: |
           test -s app/src/main/res/drawable/mishkat_logo.svg
           mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi app/src/main/res/mipmap-anydpi-v26
-          rsvg-convert --width=284 --height=284 app/src/main/res/drawable/mishkat_logo.svg > /tmp/mishkat-foreground.png
+          rsvg-convert --width=216 --height=216 app/src/main/res/drawable/mishkat_logo.svg > /tmp/mishkat-foreground.png
           for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             density="${spec%%:*}"
             size="${spec##*:}"
-            rsvg-convert --width=$((size * 2 / 3)) --height=$((size * 2 / 3)) app/src/main/res/drawable/mishkat_logo.svg > /tmp/mishkat-small.png
-            convert -size ${size}x${size} xc:"#080B12" /tmp/mishkat-small.png -gravity center -composite app/src/main/res/mipmap-${density}/ic_launcher.png
+            rsvg-convert --width=$((size / 2)) --height=$((size / 2)) app/src/main/res/drawable/mishkat_logo.svg > /tmp/mishkat-small.png
+            convert -size ${size}x${size} xc:"#771a32" /tmp/mishkat-small.png -gravity center -composite app/src/main/res/mipmap-${density}/ic_launcher.png
             cp app/src/main/res/mipmap-${density}/ic_launcher.png app/src/main/res/mipmap-${density}/ic_launcher_round.png
           done
           convert -size 432x432 xc:none /tmp/mishkat-foreground.png -gravity center -composite app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
           cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/black" />
+              <background android:drawable="@color/mishkat_icon_background" />
               <foreground android:drawable="@mipmap/ic_launcher_foreground" />
           </adaptive-icon>
           EOF
