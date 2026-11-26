@@ -20,6 +20,8 @@ jobs:
           test -s app/src/main/res/drawable/mishkat_logo.svg
           mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi app/src/main/res/mipmap-anydpi-v26
           rsvg-convert --width=216 --height=216 app/src/main/res/drawable/mishkat_logo.svg > /tmp/mishkat-foreground.png
+          mkdir -p app/src/main/res/drawable-nodpi
+          rsvg-convert --width=96 --height=96 app/src/main/res/drawable/mishkat_logo.svg > app/src/main/res/drawable-nodpi/ic_stat_mishkat.png
           for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             density="${spec%%:*}"
             size="${spec##*:}"
