@@ -32,7 +32,12 @@ class MainActivity : AppCompatActivity() {
 
         requestNotificationPermissionIfNeeded()
         ReminderScheduler.scheduleNext(this)
-        requestExactAlarmAccessIfNeeded()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestExactAlarmAccessIfNeeded()
+        }
 
         val retainedView = PlaybackWebViewHolder.take()
         val view = retainedView ?: WebView(this).apply {
@@ -133,6 +138,16 @@ class MainActivity : AppCompatActivity() {
                 ReminderScheduler.scheduleNext(this)
             }
         }
+    }
+
+    @Deprecated("Deprecated in Android API")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFICATIONS) requestExactAlarmAccessIfNeeded()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
