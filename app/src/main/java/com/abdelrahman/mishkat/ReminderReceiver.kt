@@ -15,12 +15,16 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val preferences = context.getSharedPreferences("mishkat_reminders", Context.MODE_PRIVATE)
         val sequence = preferences.getLong("sequence", 0L)
-        val isVerse = sequence % 2L == 0L
-        val itemIndex = (sequence / 2L).toInt()
+        val item = ReminderSequence.itemAt(
+            sequence,
+            ReminderContent.quranPassages.size,
+            ReminderContent.adhkar.size
+        ) ?: return
+        val isVerse = item.isQuran
         val text = if (isVerse) {
-            ReminderContent.quranPassages[itemIndex % ReminderContent.quranPassages.size]
+            ReminderContent.quranPassages[item.index]
         } else {
-            ReminderContent.adhkar[itemIndex % ReminderContent.adhkar.size]
+            ReminderContent.adhkar[item.index]
         }
 
         createChannel(context)
