@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.webkit.JavascriptInterface
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -65,9 +66,27 @@ class PlaybackBridge(context: Context) {
 }
 
 class PlaybackService : Service() {
+    private var playbackWakeLock: PowerManager.WakeLock? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        playbackWakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "$packageName:MishkatPlayback"
+        ).apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+    }
+
+    override fun onDestroy() {
+        playbackWakeLock?.let { lock ->
+            if (lock.isHeld) lock.release()
+        }
+        playbackWakeLock = null
+        super.onDestroy()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -81,7 +100,7 @@ class PlaybackService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
