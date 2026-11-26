@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
             AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> {
-                ReminderScheduler.scheduleNext(context)
+                ReminderScheduler.scheduleNext(context, reset = true)
             }
         }
     }
