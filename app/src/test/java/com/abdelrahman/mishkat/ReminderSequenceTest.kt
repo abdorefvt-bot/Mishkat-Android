@@ -8,17 +8,17 @@ import org.junit.Test
 
 class ReminderSequenceTest {
     @Test
-    fun alternatesPassageAndDhikrInOrder() {
-        assertEquals(ReminderItem(true, 0), ReminderSequence.itemAt(0, 40, 10))
-        assertEquals(ReminderItem(false, 0), ReminderSequence.itemAt(1, 40, 10))
-        assertEquals(ReminderItem(true, 1), ReminderSequence.itemAt(2, 40, 10))
-        assertEquals(ReminderItem(false, 1), ReminderSequence.itemAt(3, 40, 10))
+    fun startsWithDhikrThenAlternatesWithQuran() {
+        assertEquals(ReminderItem(false, 0), ReminderSequence.itemAt(0, 40, 10))
+        assertEquals(ReminderItem(true, 0), ReminderSequence.itemAt(1, 40, 10))
+        assertEquals(ReminderItem(false, 1), ReminderSequence.itemAt(2, 40, 10))
+        assertEquals(ReminderItem(true, 1), ReminderSequence.itemAt(3, 40, 10))
     }
 
     @Test
     fun wrapsEachListWithoutBreakingAlternation() {
-        assertEquals(ReminderItem(true, 0), ReminderSequence.itemAt(80, 40, 10))
-        assertEquals(ReminderItem(false, 0), ReminderSequence.itemAt(81, 40, 10))
+        assertEquals(ReminderItem(false, 0), ReminderSequence.itemAt(20, 40, 10))
+        assertEquals(ReminderItem(true, 10), ReminderSequence.itemAt(21, 40, 10))
     }
 
     @Test
@@ -38,8 +38,8 @@ class ReminderSequenceTest {
     }
 
     @Test
-    fun reminderIntervalIsExactlyTwoHours() {
-        assertEquals(7_200_000L, ReminderTiming.INTERVAL_MILLIS)
+    fun reminderIntervalIsExactlyOneHour() {
+        assertEquals(3_600_000L, ReminderTiming.INTERVAL_MILLIS)
     }
 
     @Test
@@ -48,8 +48,8 @@ class ReminderSequenceTest {
     }
 
     @Test
-    fun expiredOrExplicitlyResetReminderGetsRescheduledTwoHoursLater() {
-        assertEquals(7_205_000L, ReminderTiming.nextTriggerAt(4_000L, 5_000L, false))
-        assertEquals(7_205_000L, ReminderTiming.nextTriggerAt(9_000L, 5_000L, true))
+    fun expiredOrExplicitlyResetReminderGetsRescheduledOneHourLater() {
+        assertEquals(3_605_000L, ReminderTiming.nextTriggerAt(4_000L, 5_000L, false))
+        assertEquals(3_605_000L, ReminderTiming.nextTriggerAt(9_000L, 5_000L, true))
     }
 }
