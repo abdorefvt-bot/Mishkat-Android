@@ -43,13 +43,13 @@ class ReminderSequenceTest {
     }
 
     @Test
-    fun reopeningAppDoesNotResetAnExistingFutureReminder() {
-        assertTrue(ReminderTiming.shouldKeepExistingAlarm(9_000L, 5_000L, false))
+    fun reopeningAppPreservesTheExistingReminderDeadline() {
+        assertEquals(9_000L, ReminderTiming.nextTriggerAt(9_000L, 5_000L, false))
     }
 
     @Test
-    fun expiredOrExplicitlyResetReminderGetsRescheduled() {
-        assertFalse(ReminderTiming.shouldKeepExistingAlarm(4_000L, 5_000L, false))
-        assertFalse(ReminderTiming.shouldKeepExistingAlarm(9_000L, 5_000L, true))
+    fun expiredOrExplicitlyResetReminderGetsRescheduledTwoHoursLater() {
+        assertEquals(7_205_000L, ReminderTiming.nextTriggerAt(4_000L, 5_000L, false))
+        assertEquals(7_205_000L, ReminderTiming.nextTriggerAt(9_000L, 5_000L, true))
     }
 }
