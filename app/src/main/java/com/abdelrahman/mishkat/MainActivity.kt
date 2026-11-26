@@ -52,6 +52,22 @@ class MainActivity : AppCompatActivity() {
             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
             addJavascriptInterface(PlaybackBridge(applicationContext), "MishkatPlayback")
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView,
+                    request: android.webkit.WebResourceRequest
+                ): Boolean {
+                    val uri = request.url
+                    val isMishkatSite = uri.scheme == "https" &&
+                        (uri.host == "mishkatt.framer.website")
+                    if (isMishkatSite) return false
+                    return try {
+                        startActivity(Intent(Intent.ACTION_VIEW, uri))
+                        true
+                    } catch (_: Exception) {
+                        true
+                    }
+                }
+
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
                     view.evaluateJavascript(MEDIA_TRACKING_SCRIPT, null)
