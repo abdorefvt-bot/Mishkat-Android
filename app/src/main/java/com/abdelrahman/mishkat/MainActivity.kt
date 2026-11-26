@@ -1,7 +1,6 @@
 package com.abdelrahman.mishkat
 
 import android.annotation.SuppressLint
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -40,12 +39,6 @@ class MainActivity : AppCompatActivity() {
             settings.allowContentAccess = false
             settings.setSupportMultipleWindows(false)
             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
-
-            // Match Chrome's responsive viewport behavior on tablets.
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = false
-            settings.textZoom = 100
-
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
         }
@@ -61,27 +54,6 @@ class MainActivity : AppCompatActivity() {
                 if (current?.canGoBack() == true) current.goBack() else finish()
             }
         })
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-
-        // Recalculate responsive page layout after rotating a tablet.
-        webView?.post {
-            webView?.evaluateJavascript(
-                """
-                (function() {
-                    window.dispatchEvent(new Event('resize'));
-                    if (window.visualViewport) {
-                        window.visualViewport.dispatchEvent(new Event('resize'));
-                    }
-                })();
-                """.trimIndent(),
-                null
-            )
-            webView?.requestLayout()
-            webView?.invalidate()
-        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
