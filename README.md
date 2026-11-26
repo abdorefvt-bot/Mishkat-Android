@@ -1,19 +1,28 @@
 # Mishkat Android
 
-A standalone Android application wrapping the existing Mishkat website without changing its content or behavior, with native background audio and scheduled reminder support planned as first-class Android components.
+A standalone Android application for the existing Mishkat website:
 
-## Project status
+https://mishkatt.framer.website
 
-Initial repository setup. This is not yet a release APK. The implementation and device-level validation are still in progress.
+The app is intended to preserve the complete website experience while adding carefully integrated native Android capabilities.
 
-## Requirements
+## Implemented in the repository
 
-- Preserve the complete website experience in a WebView.
-- Keep existing prayer times, prayer tracking, recitations, supplications, and other site features intact.
-- Implement reliable background playback using Android media foreground-service APIs and MediaSession/Media3 after verifying the website's actual audio playback path.
-- Schedule alternating Quran passage and dhikr reminders every two hours, persist sequence state, and restore schedules after reboot.
-- Add the supplied transparent SVG as the launcher icon only at the final branding step.
+- Android application scaffold (Kotlin, AndroidX, Gradle).
+- WebView entry point configured for JavaScript, DOM storage, media playback initiated by the user, and saved navigation state.
+- Notification permission request on Android 13 and later.
+- Reminder alarm, notification receiver, and reboot receiver infrastructure.
+- GitHub Actions workflow to attempt a debug APK build on pushes to `main`.
+
+## Not complete yet
+
+- The exact 40 Quran passages and 10 user-approved adhkar have not yet been inserted. The data file intentionally remains empty rather than risk altering sacred text or inventing missing wording.
+- The actual website audio player and stream URLs have not yet been inspected. Native Media3/MediaSession background playback is therefore not implemented; adding a disconnected media service would not make the website's current player continue reliably.
+- No launcher artwork has been supplied yet. The SVG icon will be integrated at the final branding step.
+- A successful CI build and real-device functional tests have not yet been confirmed.
 
 ## Build
 
-Open this project in Android Studio with a compatible Android Gradle Plugin/Gradle installation. A release APK must not be considered complete until it builds successfully and the core behaviors are tested on a physical device.
+The GitHub Actions workflow at `.github/workflows/android-build.yml` runs `gradle assembleDebug` with JDK 17 and Gradle 8.9, then uploads the debug APK as an Actions artifact if the build succeeds.
+
+A successful build alone does not certify audio behavior, notification timing, reboot restoration, or preservation of all website features. Those require functional tests on a physical Android device.
