@@ -13,6 +13,8 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
     private var webView: WebView? = null
@@ -44,6 +46,18 @@ class MainActivity : AppCompatActivity() {
         }
         webView = view
         setContentView(view)
+
+        // Keep the web page below Android's status-bar/cutout area.
+        // This is native window-inset handling; it does not inject CSS or
+        // change the website's viewport scale, width, breakpoints, or layout.
+        ViewCompat.setOnApplyWindowInsetsListener(view) { target, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            if (target.paddingTop != topInset) {
+                target.setPadding(0, topInset, 0, 0)
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(view)
 
         val restored = savedInstanceState?.let { view.restoreState(it) }
         if (restored == null) view.loadUrl(BuildConfig.WEB_URL)
