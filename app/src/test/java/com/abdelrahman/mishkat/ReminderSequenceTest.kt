@@ -41,4 +41,15 @@ class ReminderSequenceTest {
     fun reminderIntervalIsExactlyTwoHours() {
         assertEquals(7_200_000L, ReminderTiming.INTERVAL_MILLIS)
     }
+
+    @Test
+    fun reopeningAppDoesNotResetAnExistingFutureReminder() {
+        assertTrue(ReminderTiming.shouldKeepExistingAlarm(9_000L, 5_000L, false))
+    }
+
+    @Test
+    fun expiredOrExplicitlyResetReminderGetsRescheduled() {
+        assertFalse(ReminderTiming.shouldKeepExistingAlarm(4_000L, 5_000L, false))
+        assertFalse(ReminderTiming.shouldKeepExistingAlarm(9_000L, 5_000L, true))
+    }
 }
