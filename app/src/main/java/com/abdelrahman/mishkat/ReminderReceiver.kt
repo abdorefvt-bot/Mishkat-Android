@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        ReminderScheduler.markAlarmDelivered(context)
         if (!ReminderContent.isReady()) return
 
         val preferences = context.getSharedPreferences("mishkat_reminders", Context.MODE_PRIVATE)
