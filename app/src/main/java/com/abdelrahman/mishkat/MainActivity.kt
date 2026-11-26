@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 !preferences.getBoolean(KEY_EXACT_ALARM_ENABLED, false)
             ) {
                 preferences.edit().putBoolean(KEY_EXACT_ALARM_ENABLED, true).apply()
-                ReminderScheduler.scheduleNext(this)
+                ReminderScheduler.scheduleNext(this, reset = true)
             }
         }
     }
