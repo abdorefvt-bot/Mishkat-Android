@@ -1,15 +1,20 @@
 package com.abdelrahman.mishkat
 
 import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
@@ -24,14 +29,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.BLACK
         window.navigationBarColor = android.graphics.Color.BLACK
+
         requestNotificationPermissionIfNeeded()
         ReminderScheduler.scheduleNext(this)
+        requestExactAlarmAccessIfNeeded()
 
-        val view = WebView(this).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+        val retainedView = PlaybackWebViewHolder.take()
+        val view = retainedView ?: WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
@@ -41,29 +45,43 @@ class MainActivity : AppCompatActivity() {
             settings.allowContentAccess = false
             settings.setSupportMultipleWindows(false)
             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            webViewClient = WebViewClient()
+            addJavascriptInterface(PlaybackBridge(applicationContext), "MishkatPlayback")
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView, url: String) {
+                    super.onPageFinished(view, url)
+                    view.evaluateJavascript(MEDIA_TRACKING_SCRIPT, null)
+                }
+            }
             webChromeClient = WebChromeClient()
         }
+
+        view.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
         webView = view
         setContentView(view)
 
-        // Keep the web page below Android's status-bar/cutout area.
-        // This is native window-inset handling; it does not inject CSS or
-        // change the website's viewport scale, width, breakpoints, or layout.
+        // Preserve the native status-bar inset fix without changing website CSS or breakpoints.
         ViewCompat.setOnApplyWindowInsetsListener(view) { target, insets ->
             val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            if (target.paddingTop != topInset) {
-                target.setPadding(0, topInset, 0, 0)
-            }
+            if (target.paddingTop != topInset) target.setPadding(0, topInset, 0, 0)
             insets
         }
         ViewCompat.requestApplyInsets(view)
 
-        val restored = savedInstanceState?.let { view.restoreState(it) }
-        if (restored == null) view.loadUrl(BuildConfig.WEB_URL)
+        if (retainedView == null) {
+            val restored = savedInstanceState?.let { view.restoreState(it) }
+            if (restored == null) view.loadUrl(BuildConfig.WEB_URL)
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // Keep the WebView alive in the background while its audio is playing.
+                if (PlaybackState.isPlaying) {
+                    moveTaskToBack(true)
+                    return
+                }
                 val current = webView
                 if (current?.canGoBack() == true) current.goBack() else finish()
             }
@@ -78,8 +96,42 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                7301
+                REQUEST_NOTIFICATIONS
             )
+        }
+    }
+
+    private fun requestExactAlarmAccessIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        if (alarmManager.canScheduleExactAlarms()) return
+
+        val preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+        if (preferences.getBoolean(KEY_EXACT_ALARM_PROMPTED, false)) return
+
+        preferences.edit().putBoolean(KEY_EXACT_ALARM_PROMPTED, true).apply()
+        try {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+            )
+        } catch (_: Exception) {
+            // The scheduler safely falls back to an inexact, doze-aware alarm.
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            val preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            if (alarmManager.canScheduleExactAlarms() &&
+                !preferences.getBoolean(KEY_EXACT_ALARM_ENABLED, false)
+            ) {
+                preferences.edit().putBoolean(KEY_EXACT_ALARM_ENABLED, true).apply()
+                ReminderScheduler.scheduleNext(this)
+            }
         }
     }
 
@@ -89,12 +141,75 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        webView?.apply {
-            (parent as? ViewGroup)?.removeView(this)
-            stopLoading()
-            destroy()
+        val current = webView
+        if (current != null) {
+            (current.parent as? ViewGroup)?.removeView(current)
+            if (PlaybackState.isPlaying) {
+                // Retain the playing WebView so task dismissal/recreation does not kill the stream.
+                PlaybackWebViewHolder.retain(current)
+            } else {
+                current.stopLoading()
+                current.destroy()
+            }
         }
         webView = null
         super.onDestroy()
+    }
+
+    companion object {
+        private const val REQUEST_NOTIFICATIONS = 7301
+        private const val PREFERENCES = "mishkat_reminders"
+        private const val KEY_EXACT_ALARM_PROMPTED = "exact_alarm_prompted"
+        private const val KEY_EXACT_ALARM_ENABLED = "exact_alarm_enabled"
+
+        private val MEDIA_TRACKING_SCRIPT = """
+            (function () {
+              if (window.__mishkatMediaTrackingInstalled) return;
+              window.__mishkatMediaTrackingInstalled = true;
+              let lastState = null;
+              function isPlaying() {
+                return Array.from(document.querySelectorAll('audio,video'))
+                  .some(function (media) { return !media.paused && !media.ended; });
+              }
+              function report() {
+                const active = isPlaying();
+                if (active === lastState) return;
+                lastState = active;
+                try {
+                  if (window.MishkatPlayback) {
+                    window.MishkatPlayback.onPlaybackChanged(active);
+                  }
+                } catch (error) {}
+              }
+              function observe(media) {
+                if (media.__mishkatObserved) return;
+                media.__mishkatObserved = true;
+                ['play','playing','pause','ended','emptied','abort','waiting'].forEach(function (eventName) {
+                  media.addEventListener(eventName, function () {
+                    window.setTimeout(report, 80);
+                  });
+                });
+              }
+              function scan(root) {
+                if (root && root.matches && root.matches('audio,video')) observe(root);
+                if (root && root.querySelectorAll) {
+                  root.querySelectorAll('audio,video').forEach(observe);
+                }
+                report();
+              }
+              scan(document);
+              new MutationObserver(function (records) {
+                records.forEach(function (record) {
+                  record.addedNodes.forEach(function (node) {
+                    if (node.nodeType === 1) scan(node);
+                  });
+                });
+              }).observe(document.documentElement, { childList: true, subtree: true });
+              document.addEventListener('visibilitychange', function () {
+                window.setTimeout(report, 150);
+              });
+              window.setInterval(report, 1500);
+            })();
+        """.trimIndent()
     }
 }
