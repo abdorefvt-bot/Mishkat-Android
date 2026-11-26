@@ -36,7 +36,6 @@ class ReminderReceiver : BroadcastReceiver() {
         createChannel(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_mishkat)
-            .setContentTitle("Mishkat")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
