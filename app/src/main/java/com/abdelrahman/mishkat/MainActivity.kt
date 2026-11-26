@@ -182,9 +182,15 @@ class MainActivity : AppCompatActivity() {
               if (window.__mishkatMediaTrackingInstalled) return;
               window.__mishkatMediaTrackingInstalled = true;
               let lastState = null;
+              const activeSources = new Set();
               function isPlaying() {
-                return Array.from(document.querySelectorAll('audio,video'))
+                const mediaActive = Array.from(document.querySelectorAll('audio,video'))
                   .some(function (media) { return !media.paused && !media.ended; });
+                const webAudioActive = Array.from(activeSources)
+                  .some(function (source) {
+                    return source.context && source.context.state === 'running';
+                  });
+                return mediaActive || webAudioActive;
               }
               function report() {
                 const active = isPlaying();
@@ -213,6 +219,26 @@ class MainActivity : AppCompatActivity() {
                 report();
               }
               scan(document);
+              if (window.AudioScheduledSourceNode &&
+                  !window.AudioScheduledSourceNode.prototype.__mishkatWrapped) {
+                const sourcePrototype = window.AudioScheduledSourceNode.prototype;
+                const originalStart = sourcePrototype.start;
+                sourcePrototype.start = function () {
+                  const source = this;
+                  activeSources.add(source);
+                  if (source.context && source.context.addEventListener) {
+                    source.context.addEventListener('statechange', report);
+                  }
+                  source.addEventListener('ended', function () {
+                    activeSources.delete(source);
+                    report();
+                  }, { once: true });
+                  const result = originalStart.apply(source, arguments);
+                  report();
+                  return result;
+                };
+                sourcePrototype.__mishkatWrapped = true;
+              }
               new MutationObserver(function (records) {
                 records.forEach(function (record) {
                   record.addedNodes.forEach(function (node) {
