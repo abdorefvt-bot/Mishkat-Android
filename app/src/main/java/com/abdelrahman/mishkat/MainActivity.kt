@@ -128,6 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        webView?.onResume()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
             val preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
@@ -138,6 +139,12 @@ class MainActivity : AppCompatActivity() {
                 ReminderScheduler.scheduleNext(this, reset = true)
             }
         }
+    }
+
+    override fun onPause() {
+        // Do not tell WebView to pause media while its native playback service is active.
+        if (!PlaybackState.isPlaying) webView?.onPause()
+        super.onPause()
     }
 
     @Deprecated("Deprecated in Android API")
@@ -183,14 +190,19 @@ class MainActivity : AppCompatActivity() {
               window.__mishkatMediaTrackingInstalled = true;
               let lastState = null;
               const activeSources = new Set();
+              const activeContexts = new Set();
               function isPlaying() {
                 const mediaActive = Array.from(document.querySelectorAll('audio,video'))
                   .some(function (media) { return !media.paused && !media.ended; });
-                const webAudioActive = Array.from(activeSources)
-                  .some(function (source) {
-                    return source.context && source.context.state === 'running';
-                  });
-                return mediaActive || webAudioActive;
+                return mediaActive || activeSources.size > 0;
+              }
+              function resumeBackgroundAudio() {
+                if (!document.hidden) return;
+                activeContexts.forEach(function (context) {
+                  if (context && context.state === 'suspended') {
+                    context.resume().catch(function () {});
+                  }
+                });
               }
               function report() {
                 const active = isPlaying();
@@ -225,15 +237,24 @@ class MainActivity : AppCompatActivity() {
                 const originalStart = sourcePrototype.start;
                 sourcePrototype.start = function () {
                   const source = this;
+                  const result = originalStart.apply(source, arguments);
                   activeSources.add(source);
-                  if (source.context && source.context.addEventListener) {
-                    source.context.addEventListener('statechange', report);
+                  if (source.context) {
+                    activeContexts.add(source.context);
+                    if (source.context.addEventListener) {
+                      source.context.addEventListener('statechange', report);
+                    }
                   }
                   source.addEventListener('ended', function () {
                     activeSources.delete(source);
+                    if (source.context &&
+                        !Array.from(activeSources).some(function (item) {
+                          return item.context === source.context;
+                        })) {
+                      activeContexts.delete(source.context);
+                    }
                     report();
                   }, { once: true });
-                  const result = originalStart.apply(source, arguments);
                   report();
                   return result;
                 };
@@ -247,6 +268,7 @@ class MainActivity : AppCompatActivity() {
                 });
               }).observe(document.documentElement, { childList: true, subtree: true });
               document.addEventListener('visibilitychange', function () {
+                resumeBackgroundAudio();
                 window.setTimeout(report, 150);
               });
               window.setInterval(report, 1500);
