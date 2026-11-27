@@ -97,20 +97,12 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val current = webView
-                val isPhone = resources.configuration.smallestScreenWidthDp < 600
-
-                // On phones, Back navigates within the WebView first, even during playback.
-                if (isPhone && current?.canGoBack() == true) {
-                    current.goBack()
-                    return
-                }
-
-                // Preserve the existing background-playback and Back behavior on other cases.
+                // Keep the WebView alive in the background while its audio is playing.
                 if (PlaybackState.isPlaying) {
                     moveTaskToBack(true)
                     return
                 }
+                val current = webView
                 if (current?.canGoBack() == true) current.goBack() else finish()
             }
         })
